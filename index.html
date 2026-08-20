@@ -318,7 +318,7 @@ function Row({ label, value }) {
   );
 }
 
-function TicketView({ order, onDone }) {
+function TicketView({ order, onDone, onClear }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
       <div style={{ background: "#211C15", border: "2px dashed #F0A202", borderRadius: 16, padding: 24, width: "100%", maxWidth: 360 }}>
@@ -346,6 +346,9 @@ function TicketView({ order, onDone }) {
       </div>
       <button onClick={onDone} style={{ marginTop: 20, background: "none", border: "1px solid #3A3122", color: "#D9CFB8", borderRadius: 12, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>
         回到菜單繼續點餐
+      </button>
+      <button onClick={onClear} style={{ marginTop: 10, background: "none", border: "none", color: "#A79980", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+        已取餐完成,清除這筆紀錄
       </button>
     </div>
   );
@@ -466,6 +469,13 @@ function App() {
   const [session, setSession] = useState(undefined); // undefined = still checking
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lastOrder");
+      if (saved) setLastOrder(JSON.parse(saved));
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
     db.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: listener } = db.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => listener.subscription.unsubscribe();
@@ -474,6 +484,10 @@ function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
   const addToCart = (item) => setCart((prev) => [...prev, item]);
   const logout = () => db.auth.signOut();
+  const clearSavedOrder = () => {
+    try { localStorage.removeItem("lastOrder"); } catch (e) {}
+    setLastOrder(null);
+  };
 
   const confirmOrder = async (orderDraft) => {
     setSubmitting(true);
@@ -490,6 +504,7 @@ function App() {
       return;
     }
     setLastOrder(order);
+    try { localStorage.setItem("lastOrder", JSON.stringify(order)); } catch (e) {}
     setCart([]);
     setView("ticket");
   };
@@ -513,10 +528,16 @@ function App() {
         {saveError && <p style={{ color: "#D64933", fontSize: 12, marginBottom: 12 }}>{saveError}</p>}
 
         {view === "owner" && (session ? <OwnerView onLogout={logout} /> : session === null ? <LoginView onLoggedIn={() => {}} /> : <p style={{ color: "#A79980", textAlign: "center", marginTop: 40 }}>載入中...</p>)}
+        {view === "menu" && lastOrder && (
+          <button onClick={() => setView("ticket")} style={{ width: "100%", background: "#211C15", border: "1px dashed #F0A202", borderRadius: 14, padding: "12px 14px", marginBottom: 14, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
+            <span style={{ color: "#F0A202", fontSize: 13, fontWeight: 700 }}>🎫 你有一筆進行中的訂單({lastOrder.dateLabel} {lastOrder.time})</span>
+            <span style={{ color: "#D9CFB8", fontSize: 12 }}>查看 →</span>
+          </button>
+        )}
         {view === "menu" && <MenuView onAddToCart={addToCart} />}
         {view === "cart" && <CartView cart={cart} setCart={setCart} onCheckout={() => setView("checkout")} />}
         {view === "checkout" && <CheckoutView cart={cart} onBack={() => setView("cart")} onConfirm={confirmOrder} submitting={submitting} />}
-        {view === "ticket" && lastOrder && <TicketView order={lastOrder} onDone={() => setView("menu")} />}
+        {view === "ticket" && lastOrder && <TicketView order={lastOrder} onDone={() => setView("menu")} onClear={() => { clearSavedOrder(); setView("menu"); }} />}
       </div>
 
       {view !== "owner" && view !== "checkout" && view !== "ticket" && (
