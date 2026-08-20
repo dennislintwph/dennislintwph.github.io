@@ -39,6 +39,12 @@ const OPEN_HOUR = 16;
 const CLOSE_HOUR = 23;
 const CLOSED_WEEKDAY = 1;
 
+function absoluteDateLabel(dateKey) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${m}/${d} (${"日一二三四五六"[date.getDay()]})`;
+}
+
 function getUpcomingDates() {
   const days = [];
   const now = new Date();
@@ -397,7 +403,7 @@ function OwnerView({ onLogout }) {
     } else {
       setOrders(
         data.map((o) => ({
-          id: o.id, name: o.name, phone: o.phone, dateLabel: o.date_label,
+          id: o.id, name: o.name, phone: o.phone, dateLabel: o.date_label, dateKey: o.date_key,
           time: o.pickup_time, total: o.total, cart: o.cart, done: o.done,
         }))
       );
@@ -434,7 +440,7 @@ function OwnerView({ onLogout }) {
                 <span style={{ color: "#F5EEDD", fontWeight: 700 }}>{o.name} · {o.phone}</span>
                 <span style={{ color: "#F0A202", fontWeight: 700 }}>{money(o.total)}</span>
               </div>
-              <div style={{ color: "#A79980", fontSize: 12, marginBottom: 8 }}>取餐: {o.dateLabel} {o.time}</div>
+              <div style={{ color: "#A79980", fontSize: 12, marginBottom: 8 }}>取餐: {absoluteDateLabel(o.dateKey)} {o.time}</div>
               <div style={{ fontSize: 13, color: "#D9CFB8", marginBottom: 10 }}>
                 {o.cart.map((i) => (
                   <div key={i.cartId}>{i.name} {i.size} x{i.qty}{i.spicy ? ` · ${i.spicy}` : ""}{i.addons?.length ? ` · ${i.addons.join("、")}` : ""}</div>
