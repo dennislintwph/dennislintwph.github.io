@@ -345,7 +345,44 @@ function TicketView({ order, onDone }) {
   );
 }
 
-function OwnerView() {
+function LoginView({ onLoggedIn }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setError("");
+    setLoading(true);
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setError("帳號或密碼錯誤,請再確認一次。");
+      return;
+    }
+    onLoggedIn();
+  };
+
+  return (
+    <div style={{ maxWidth: 320, margin: "40px auto 0" }}>
+      <h3 style={{ color: "#F5EEDD", marginBottom: 16, textAlign: "center" }}>店家登入</h3>
+      <div style={{ marginBottom: 14 }}>
+        <label style={{ fontSize: 13, color: "#F0A202", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 6 }}>Email</label>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+      </div>
+      <div style={{ marginBottom: 18 }}>
+        <label style={{ fontSize: 13, color: "#F0A202", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 6 }}>密碼</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} onKeyDown={(e) => e.key === "Enter" && submit()} />
+      </div>
+      {error && <p style={{ color: "#D64933", fontSize: 13, marginBottom: 12 }}>{error}</p>}
+      <button onClick={submit} disabled={loading} style={{ width: "100%", background: "#D64933", color: "#FFF3EC", border: "none", borderRadius: 14, padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1 }}>
+        {loading ? "登入中..." : "登入"}
+      </button>
+    </div>
+  );
+}
+
+function OwnerView({ onLogout }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -379,7 +416,10 @@ function OwnerView() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h3 style={{ color: "#F5EEDD", margin: 0, fontSize: 16 }}>訂單列表({orders.length})</h3>
-        <button onClick={loadOrders} style={{ background: "none", border: "1px solid #3A3122", color: "#D9CFB8", borderRadius: 10, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>重新整理</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={loadOrders} style={{ background: "none", border: "1px solid #3A3122", color: "#D9CFB8", borderRadius: 10, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>重新整理</button>
+          <button onClick={onLogout} style={{ background: "none", border: "1px solid #3A3122", color: "#D64933", borderRadius: 10, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>登出</button>
+        </div>
       </div>
       {err && <p style={{ color: "#D64933", fontSize: 13, marginBottom: 12 }}>{err}</p>}
       {loading ? (
@@ -417,9 +457,17 @@ function App() {
   const [lastOrder, setLastOrder] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [session, setSession] = useState(undefined); // undefined = still checking
+
+  useEffect(() => {
+    db.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = db.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
   const addToCart = (item) => setCart((prev) => [...prev, item]);
+  const logout = () => db.auth.signOut();
 
   const confirmOrder = async (orderDraft) => {
     setSubmitting(true);
@@ -458,7 +506,7 @@ function App() {
 
         {saveError && <p style={{ color: "#D64933", fontSize: 12, marginBottom: 12 }}>{saveError}</p>}
 
-        {view === "owner" && <OwnerView />}
+        {view === "owner" && (session ? <OwnerView onLogout={logout} /> : session === null ? <LoginView onLoggedIn={() => {}} /> : <p style={{ color: "#A79980", textAlign: "center", marginTop: 40 }}>載入中...</p>)}
         {view === "menu" && <MenuView onAddToCart={addToCart} />}
         {view === "cart" && <CartView cart={cart} setCart={setCart} onCheckout={() => setView("checkout")} />}
         {view === "checkout" && <CheckoutView cart={cart} onBack={() => setView("cart")} onConfirm={confirmOrder} submitting={submitting} />}
