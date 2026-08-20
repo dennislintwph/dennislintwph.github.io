@@ -242,7 +242,7 @@ function CheckoutView({ cart, onBack, onConfirm, submitting }) {
 
   const submit = () => {
     if (!name.trim()) return setError("請填寫姓名");
-    if (!phone.trim()) return setError("請填寫電話");
+    if (!/^09\d{8}$/.test(phone.trim())) return setError("請輸入正確的台灣手機號碼格式,例如 0912345678");
     if (!time) return setError("請選擇取餐時間");
     setError("");
     onConfirm({ name, phone, dateLabel: dateInfo.label, dateKey, time, total, cart });
@@ -260,7 +260,7 @@ function CheckoutView({ cart, onBack, onConfirm, submitting }) {
       </div>
       <div style={{ marginBottom: 18 }}>
         <label style={{ fontSize: 13, color: "#F0A202", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 6 }}>電話</label>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0912-345-678" style={inputStyle} />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0912345678" style={inputStyle} />
       </div>
 
       <div style={{ marginBottom: 10 }}>
