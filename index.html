@@ -483,7 +483,8 @@ function ProductForm({ product, onCancel, onSaved }) {
     setSaving(true);
     let imageUrl = product?.image_url || null;
     if (imageFile) {
-      const path = `${Date.now()}-${imageFile.name}`;
+      const ext = (imageFile.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await db.storage.from("product-images").upload(path, imageFile);
       if (upErr) {
         setSaving(false);
